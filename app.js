@@ -1,6 +1,7 @@
 const { Bot } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
+const prefix = '#!';
 
 // Create server
 let server = restify.createServer();
@@ -23,6 +24,31 @@ bot.onReceive((context) => {
     const { MessageStyler } = require('botbuilder');
 
     if (context.request.type === 'message') {
-        context.reply(`Here it is!`);
+		const message = context.request.text || '';
+		let responseText = null;
+		if (message.indexOf(prefix) === 0) {
+			const agentName = context.request.from.name || 'Unknown';
+			switch(message) {
+				case `${prefix}login`:
+					responseText = `Bevenuto ${agentName}!`;
+				break;
+				case `${prefix}logout`:
+					responseText = `Arrivederci ${agentName}!`;
+				break;
+				case `${prefix}end`:
+					responseText = 'Conversazione terminata';
+				break;
+				case `${prefix}agents`:
+					responseText = 'Lista agenti';
+				break;
+				default:
+	
+			}
+			if (responseText) {
+				context.reply(responseText);
+			}
+		}
+
+        // context.reply(`Here it is!`);
     }
 });
