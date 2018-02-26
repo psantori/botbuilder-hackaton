@@ -3,9 +3,8 @@ const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
 const { LuisRecognizer } = require('botbuilder-ai');
 
-const appId = '9c2497c5-aa37-4e7a-a01d-71c4d6d931ad';
-const subscriptionKey = 'bc45c7b8804f40469ee76ac329d707df';
-const model = new LuisRecognizer(appId, subscriptionKey);
+// Luis model
+const model = new LuisRecognizer(process.env.LUIS_APP_ID, process.env.LUIS_SUBSCRIPTION_KEY);
 
 // Create server
 let server = restify.createServer();
