@@ -1,8 +1,8 @@
-const { Bot } = require('botbuilder');
+const { Bot, BotStateManager, MemoryStorage } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
 const agentsManager = require('./agentsManager.js');
-const prefix = '#!';
+const cmdManager = require('./cmdManager.js');
 
 // Create server
 let server = restify.createServer();
@@ -18,112 +18,11 @@ const adapter = new BotFrameworkAdapter({
 server.post('/api/messages', adapter.listen());
 
 // Initialize bot by passing it adapter
-const bot = new Bot(adapter);
-
+const bot = new Bot(adapter);	
+bot.use(new MemoryStorage());
+bot.use(new BotStateManager());
+bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
-    const { MessageStyler } = require('botbuilder');
-
-    if (context.request.type === 'message') {
-		const message = context.request.text || '';
-		let responseText = null;
-		if (message.indexOf(prefix) === 0) {
-			const cmd = message.substr(prefix.length);
-			switch(cmd) {
-				case `login`:
-					agentsManager.addAgent(context.conversationReference)
-					.then(result => {
-						responseText = `Bevenuto ${result.name}!`;
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `logout`:
-					agentsManager.delAgent(context.conversationReference)
-					.then(result => {
-						responseText = `Arrivederci ${result.name}!`;
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));	
-				break;
-				case `end`:
-					agentsManager.setListening(context.conversationReference)
-					.then(result => {
-						responseText = '😀';
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `online`:
-					agentsManager.setOnline(context.conversationReference)
-					.then(result => {
-						responseText = '😀';
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `offline`:
-					agentsManager.setOffline(context.conversationReference)
-					.then(result => {
-						responseText = '😀';
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `busy`:
-					agentsManager.setBusy(context.conversationReference)
-					.then(result => {
-						responseText = '😀';
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `me`:
-					agentsManager.me(context.conversationReference)
-					.then(result => {
-						responseText = JSON.stringify(result, null, 2);
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				case `agents`:
-					agentsManager.getAgents(context.conversationReference)
-					.then(result => {
-						responseText = JSON.stringify(result, null, 2);
-					})
-					.catch(err => {
-						responseText = `Err: ${err}`;						
-						console.log(err)
-					})
-					.then(result => context.reply(responseText));
-				break;
-				default:
-					responseText = `Non capisco il comando ${cmd}`;
-			}
-			if (responseText) {
-				context.reply(responseText);
-			}
-		}
-    }
+	context.reply(JSON.stringify(context.state.conversation.command || {}));
 });
