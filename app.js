@@ -1,7 +1,7 @@
 const { Bot } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
-const agentsManager = require('./agentsManger.js');
+const agentsManager = require('./agentsManager.js');
 const prefix = '#!';
 
 // Create server
