@@ -3,6 +3,7 @@ const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
 const agentsManager = require('./agentsManager.js');
 const cmdManager = require('./cmdManager.js');
+const sprintf = require('sprintf').sprintf;
 
 // Create server
 let server = restify.createServer();
@@ -24,5 +25,29 @@ bot.use(new BotStateManager());
 bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
-	context.reply(JSON.stringify(context.state.conversation.command || {}));
+	const command = context.state.conversation.command;
+	
+	if (command && command.isCommand) {
+		let promise = null;
+		let responseMsg = null;
+		switch (command.cmdString) {
+			case 'login':
+			promise = agentsManager.addAgent(context.conversationReference);
+			break;
+		}
+		if (promise) {
+			promise
+				.then(result => {
+					responseMsg = sprintf(command.command.successMsg, result);
+					context.reply(responseMsg);
+				})
+				.catch( err => {
+					rensponseMsg = sprintf(command.command.failureMsg, err);
+					context.reply(responseMsg);
+				});
+	
+		}
+		
+	}
+	
 });
