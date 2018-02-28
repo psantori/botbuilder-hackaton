@@ -7,7 +7,11 @@ const hash = crypto.createHash('sha256');
 // console.log(hash.digest('hex'));
 let cache = {};
 
-const luis = new LuisRecognizer(process.env.LUIS_APP_ID, process.env.LUIS_SUBSCRIPTION_KEY);
+const luis = new LuisRecognizer({
+        serviceEndpoint: 'https://westeurope.api.cognitive.microsoft.com',
+        appId: process.env.LUIS_APP_ID,
+        subscriptionKey: process.env.LUIS_SUBSCRIPTION_KEY
+    });
 
 const setCache = (key, cacheValue) => {
     return new Promise((resolve, reject) => {
@@ -41,18 +45,23 @@ const clearCache = () => {
     });
 }
 
-const recognize = (message) => {
+const recognize = (context) => {
     return new Promise((resolve, reject) => {
         let response = null;
-        getCache(message)
-        .then(result => {
-            if (result) {
-                response = result;
-                return response;
-            } else {
-                return luis.recognize(message);
-            }
-        })
+        const message = context && context.request && context.request.text?context.request.text:null;
+        if (!message) {
+            reject('No message provided');
+        }
+        // getCache(message)
+        // .then(result => {
+        //     if (result) {
+        //         response = result;
+        //         return response;
+        //     } else {
+        //         return luis.recognize(context);
+        //     }
+        // })
+        luis.recognize(context)
         .then(result => {
             if (response) {
                 return response;
@@ -60,7 +69,7 @@ const recognize = (message) => {
                 return LuisRecognizer.findTopIntent(result);
             }
         })
-        .then(result => setCache(message, result))
+        // .then(result => setCache(message, result))
         .then(result => resolve(result))
         .catch(err => reject(err));
     });
@@ -68,5 +77,6 @@ const recognize = (message) => {
 
 module.exports = {
     clearCache,
-    recognize
+    recognize,
+    luis
 }
