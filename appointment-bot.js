@@ -3,7 +3,7 @@ require('dotenv').config();
 const { Bot, BotStateManager, MemoryStorage } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
-//const apmtConnector = require('./modules/appointment-connector.js');
+const apmtConnector = require('./modules/appointment-connector.js');
 const luisConnector = require('./modules/luis-connector.js');
 const createIntent = require('./modules/create-intent.js');
 const deleteIntent = require('./modules/delete-intent.js');
@@ -102,11 +102,36 @@ bot.onReceive((context) => {
                 context.state.user['intent'] = undefined;
                 
                 if (userIntent.action == 'create') {
-                    return context.reply('I will create: \n' + JSON.stringify(userIntent, null, 2));
+                    context.reply('I will create: \n' + JSON.stringify(userIntent, null, 2));
+                    return apmtConnector.setAppointment({
+                        date: userIntent.date,
+                        storeId: userIntent.storeId,
+                        agentId: userIntent.agentId,
+                        userId: context.request.from.id
+                    })
+                    .then(result => {
+                        return context.reply(`Done with result: ${JSON.stringify(result)}`);
+                    })
+                    .catch(err => context.reply(`Oops, i got an error: ${err}`));
                 } else if (userIntent.action == 'delete') {
-                    return context.reply('I will delete: \n' + JSON.stringify(userIntent, null, 2));
+                    context.reply('I will delete: \n' + JSON.stringify(userIntent, null, 2));
+                    return apmtConnector.getAppointments({date: userIntent.date, userId: context.request.from.id})
+                    .then(result => {
+                        if (result.success && result.data.length) {
+                            return apmtConnector.deleteAppointment(result.data[0].id);
+                        }
+                        return null;
+                    })
+                    .then(result => context.reply(result && result.success?'Done':`Error: ${result?result.error:''}`))
+                    .catch(err => context.reply(`Oops, i got an error: ${err}`));
+                    
                 } else if (userIntent.action == 'show') {
-                    return context.reply('I will show your appointment: \n' + JSON.stringify(userIntent, null, 2));
+                    context.reply('I will show your appointment: \n' + JSON.stringify(userIntent, null, 2));
+                    return apmtConnector.getAppointments({})
+                    .then(result => {
+                        return context.reply(`Done with result: ${JSON.stringify(result)}`);
+                    })
+                    .catch(err => context.reply(`Oops, i got an error: ${err}`));
                 }    
 
             } else if (!context.state.user['intent']) {

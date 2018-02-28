@@ -2,7 +2,8 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-const baseUrl = '';
+const baseUrl = 'http://fff27279.ngrok.io/';
+const endpoint = 'bookings/'
 let mockAppointments = [];
 
 const model = () => {
@@ -41,11 +42,14 @@ const fetchData = (url, options) => {
     return new Promise((resolve, reject) => {
         fetch(url, {
             method: options.method || 'GET',
-            body: options.body
+            body: options.body,
+            headers: {
+                "Content-type": 'application/json'
+            }
         })
         .then(result => result.json())
         .then(result => resolve(result))
-        .catch(err => rejet(err));
+        .catch(err => reject(err));
     });
 }
 
@@ -80,9 +84,24 @@ const getAppointments = (options) => {
     return new Promise((resolve, reject) => {
         // api call
         const response = responseModel();
-        response.success = true;
-        response.data = filterAppointments(options);
-        resolve(response);
+        fetchData(`${baseUrl}${endpoint}?${Object.keys(options).map(key => key + '=' + options[key]).join('&')}`, {
+            method: 'GET'
+        })
+        .then(result => {
+            response.success = true;
+            response.data = result;
+            return response;
+        })
+        .catch(err => {
+            response.success = false;
+            response.error = err;
+            return response;
+        })
+        .then(result => resolve(response))
+        .catch(err => reject(err));
+        // response.success = true;
+        // response.data = filterAppointments(options);
+        // resolve(response);
     });
 }
 
@@ -93,15 +112,53 @@ const setAppointment = (appointment) => {
             return reject('Missing informations');
         }
         // api POST call
-        mockAppointments.push(appointment);
+        // mockAppointments.push(appointment);
         const response = responseModel();
-        response.success = true;
-        response.data = appointment;
-        resolve(response);
+        fetchData(`${baseUrl}${endpoint}`, {
+            method: 'POST',
+            body: JSON.stringify(appointment)
+        })
+        .then(result => {
+            response.success = true;
+            response.data = result;
+            return response;
+        })
+        .catch(err => {
+            response.success = false;
+            response.error = err;
+            return response;
+        })
+        .then(result => resolve(response))
+        .catch(err => reject(err));
+        // response.success = true;
+        // response.data = appointment;
+        // resolve(response);
+    });
+}
+
+const deleteAppointment = (appointmentId) => {
+    return new Promise((resolve, reject) => {
+        const response = responseModel();
+        fetchData(`${baseUrl}${endpoint}${appointmentId}`, {
+            method: 'DELETE'
+        })
+        .then(result => {
+            response.success = true;
+            response.data = result;
+            return response;
+        })
+        .catch(err => {
+            response.success = false;
+            response.error = err;
+            return response;
+        })
+        .then(result => resolve(response))
+        .catch(err => reject(err));
     });
 }
 
 module.exports = {
     getAppointments,
-    setAppointment
+    setAppointment,
+    deleteAppointment
 }
