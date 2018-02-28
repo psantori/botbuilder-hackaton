@@ -1,5 +1,7 @@
 'use strict';
 
+const { MessageStyler, CardStyler } = require('botbuilder');
+
 const model = () => ({ 
     action: 'create',
     date: null,
@@ -36,7 +38,17 @@ const checkEntities = (context, userState, luisIntent) => {
         } else if (!userState['intent'].storeId) {
             missing = 'Well, what Store do you prefer';
         } else if (!userState['intent'].agentId) {
-            missing = 'Do you want select Store Assistant?';
+            if (luisIntent.name != 'None') {
+                missing = 'Do you want select Store Assistant?';
+            } else if (context.request.text.toLowerCase() == 'yes') {
+                missing = MessageStyler.carousel([
+                    CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/women/44.jpg'], ['Vivian']),
+                    CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/men/49.jpg'], ['Gerard'])
+                  ]);
+            } else if (context.request.text.toLowerCase() != 'vivian' || context.request.text.toLowerCase() != 'michael') {
+                missing = context.request.text + ' isn\'t available. Only Vivian or Michael';
+            } 
+            
         }
         if (missing) {
             context.reply(missing);
