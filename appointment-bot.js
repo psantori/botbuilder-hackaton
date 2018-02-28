@@ -59,24 +59,21 @@ server.post('/api/messages', adapter.listen());
 
 const parseIntent = (context, userState, luisIntent) => {
     const intent = INTENTS[luisIntent.name];
-    if(!userState['intent']) {
-        userState['intent'] = intent; 
-
-    }
-    if ((!userState['intent'] && intent.action === 'create') || userState['intent'].action === 'create') {
+    
+    if ((!userState['intent'] && intent.action === 'create') || (userState['intent'] && userState['intent'].action === 'create')) {
+        if(!userState['intent']) {
+            userState['intent'] = intent; 
+        }
         return createIntent.checkEntities(context, userState, luisIntent);
     }
-    return context.reply('Sorry, I don\'t understand your request.');
-    
+    return false;
 }
 
 // Initialize bot by passing it adapter
 const bot = new Bot(adapter);	
 bot.use(new MemoryStorage());
 bot.use(new BotStateManager());
-// bot.use(luisConnector.luis);
 bot.onReceive((context) => {
-    // context.reply(context.request.type);
     if (context.request.type === 'conversationUpdate') {
         if (context.request.membersAdded.length && context.request.membersAdded[0].name !== 'Bot') {
             context.showTyping();
@@ -89,7 +86,11 @@ bot.onReceive((context) => {
         .then(result => parseIntent(context, context.state.user, result))
         .then(result => {
             if (result) {
-                return context.reply('I understood: \n' + JSON.stringify(context.state.user['intent'], null, 2));
+                const userIntent = context.state.user['intent'];
+                context.state.user['intent'] = undefined;
+                return context.reply('I understood: \n' + JSON.stringify(userIntent, null, 2));
+            } else if (!context.state.user['intent']) {
+                return context.reply('Sorry, i don\'t understand your request');
             }
         })
         .catch(err => context.reply(`ERROR: ${err}`));
