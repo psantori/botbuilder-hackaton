@@ -20,6 +20,8 @@
     "botbuilder": "^4.0.0-m1.7",
     "botbuilder-ai": "^4.0.0-m1.7",
     "botbuilder-services": "^4.0.0-m1.7",
+    "dotenv": "^5.0.1",
+    "node-fetch": "^2.0.0",
     "replace-in-file": "^3.1.1",
     "restify": "^6.3.4",
     "sprintf": "^0.1.5",
