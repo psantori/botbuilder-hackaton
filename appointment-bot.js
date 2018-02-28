@@ -7,6 +7,7 @@ const restify = require('restify');
 const luisConnector = require('./modules/luis-connector.js');
 const createIntent = require('./modules/create-intent.js');
 const deleteIntent = require('./modules/delete-intent.js');
+const showIntent = require('./modules/show-intent.js');
 
 
 const INTENTS = {
@@ -71,6 +72,11 @@ const parseIntent = (context, userState, luisIntent) => {
             userState['intent'] = intent; 
         }
         return deleteIntent.checkEntities(context, userState, luisIntent);
+    } else if ((!userState['intent'] && intent.action === 'show') || (userState['intent'] && userState['intent'].action === 'show')) {
+        if(!userState['intent']) {
+            userState['intent'] = intent; 
+        }
+        return showIntent.checkEntities(context, userState, luisIntent);
     }
     return false;
 }
@@ -99,6 +105,8 @@ bot.onReceive((context) => {
                     return context.reply('I will create: \n' + JSON.stringify(userIntent, null, 2));
                 } else if (userIntent.action == 'delete') {
                     return context.reply('I will delete: \n' + JSON.stringify(userIntent, null, 2));
+                } else if (userIntent.action == 'show') {
+                    return context.reply('I will show your appointment: \n' + JSON.stringify(userIntent, null, 2));
                 }    
 
             } else if (!context.state.user['intent']) {
