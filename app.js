@@ -32,8 +32,17 @@ bot.onReceive((context) => {
 		let responseMsg = null;
 		switch (command.cmdString) {
 			case 'login':
-			promise = agentsManager.addAgent(context.conversationReference);
-			break;
+				promise = agentsManager.addAgent(context.conversationReference);
+				break;
+			case 'logout':
+				promise = agentsManager.delAgent(context.conversationReference);
+				break;
+			case 'end':
+				promise = agentsManager.setListening(context.conversationReference);
+				break;
+			case 'agents':
+				promise = agentsManager.getAgents(context.conversationReference);
+				break;
 		}
 		if (promise) {
 			promise
