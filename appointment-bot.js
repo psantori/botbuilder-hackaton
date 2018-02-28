@@ -3,9 +3,10 @@ require('dotenv').config();
 const { Bot, BotStateManager, MemoryStorage } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
-const apmtConnector = require('./modules/appointment-connector.js');
+//const apmtConnector = require('./modules/appointment-connector.js');
 const luisConnector = require('./modules/luis-connector.js');
 const createIntent = require('./modules/create-intent.js');
+const deleteIntent = require('./modules/delete-intent.js');
 
 
 const INTENTS = {
@@ -65,6 +66,8 @@ const parseIntent = (context, userState, luisIntent) => {
     }
     if ((!userState['intent'] && intent.action === 'create') || userState['intent'].action === 'create') {
         return createIntent.checkEntities(context, userState, luisIntent);
+    } else if ((!userState['intent'] && intent.action === 'delete') || userState['intent'].action === 'delete') {
+        return deleteIntent.checkEntities(context, userState, luisIntent);
     }
     return context.reply('Sorry, I don\'t understand your request.');
     
@@ -89,7 +92,12 @@ bot.onReceive((context) => {
         .then(result => parseIntent(context, context.state.user, result))
         .then(result => {
             if (result) {
-                return context.reply('I understood: \n' + JSON.stringify(context.state.user['intent'], null, 2));
+                if (context.state.user['intent'].action == 'create') {
+                    return context.reply('I will create: \n' + JSON.stringify(context.state.user['intent'], null, 2));
+                } else if (context.state.user['intent'].action == 'delete') {
+                    return context.reply('I will delete: \n' + JSON.stringify(context.state.user['intent'], null, 2));
+                }
+                
             }
         })
         .catch(err => context.reply(`ERROR: ${err}`));

@@ -19,7 +19,7 @@ const CMDS = {
     offline: createCmd(['offline', 'Imposta stato come non disponibile', 'Ok %(name)s, torna presto!', 'Si è verificato un errore: %s']),
     online: createCmd(['online', 'Imposta stato come disponibile', 'Bentornato %(name)s!', 'Si è verificato un errore: %s']),
     me: createCmd(['me', 'Visualizza il tuo stato', '%s', 'Si è verificato un errore: %s']),
-    agents: createCmd(['agents', 'Visualizza a lista degli agenti', '%s', 'Si è verificato un errore: %s']),
+    agents: createCmd(['agents', 'Visualizza la lista degli agenti', '%s', 'Si è verificato un errore: %s']),
     help: createCmd(['help', 'Tu sei qui', '%s', 'Si è verificato un errore: %s'])
 }
 
