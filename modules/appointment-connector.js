@@ -2,7 +2,7 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-const baseUrl = 'http://fff27279.ngrok.io/';
+const baseUrl = 'https://booking-bot-apis.azurewebsites.net/';
 const endpoint = 'bookings/'
 let mockAppointments = [];
 
@@ -44,7 +44,8 @@ const fetchData = (url, options) => {
             method: options.method || 'GET',
             body: options.body,
             headers: {
-                "Content-type": 'application/json'
+                "Content-type": 'application/json',
+                "X-Auth": process.env.TOKEN
             }
         })
         .then(result => result.json())
