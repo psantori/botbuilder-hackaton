@@ -5,6 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const agentsManager = require('./agentsManager.js');
 const cmdManager = require('./cmdManager.js');
+const bookingService = require('./modules/booking-service.js');
 const sprintf = require('sprintf').sprintf;
 
 const agentIds = ['agent-007'];
@@ -101,7 +102,16 @@ bot.onReceive((context) => {
 			if (message === 'Talk to human assistant') {
 				context.reply('Please wait, you will be connected to a sales agent soon...');
 				context.showTyping();
-
+			} else if (message === 'Book a visit to a store') {
+				context.reply('Questo spazio è di Giada');
+				bookingService.doIt(context)
+					.then(result => {
+						console.log('booking service response ', result);
+						if (result.done) {
+							context.reply(result.response);
+						}
+					})
+					.catch(err => console.log(err));
 			} else {
 				const msg = generateMenuBtns();
 				msg.text = `Please, select one of the suggested actions.`;
