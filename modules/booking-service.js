@@ -85,6 +85,10 @@ const doIt = (context, luisIntent) => {
                 })
                 .then(result => {
                     model.response = `Done with result: ${JSON.stringify(result)}`;
+                    context.state.user['intent'].date = null;
+                    context.state.user['intent'].storeId = null;
+                    context.state.user['intent'].agentId = null;
+                    context.state.user['intent'].userId = null;
                     context.state.user['intent'] = undefined;
                 })
                 .then(result => resolve(model))
