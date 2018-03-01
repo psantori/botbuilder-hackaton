@@ -118,6 +118,9 @@ bot.onReceive((context) => {
 								if (result.done) {
 									context.reply(result.response);
 								}
+								if (!result.continue) {
+									context.reply("Good bye");
+								}
 							})
 							.catch(err => console.log(err));
 						});

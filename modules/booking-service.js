@@ -65,6 +65,7 @@ const doIt = (context, luisIntent) => {
         console.log("booking service doIt");
         const message = context.request.text;
         let model = start(context, `I'm sorry, I don't understood.`);
+        model.continue = true;
 
         if (message === 'Take an appointment' || (context.state.user['intent'] && context.state.user['intent'].action === INTENTS['create-appointment'].action)) {
             console.log('start take an appointment');
@@ -84,8 +85,18 @@ const doIt = (context, luisIntent) => {
                     userId: context.request.from.id
                 })
                 .then(result => {
-                    model.response = `Done with result: ${JSON.stringify(result)}`;
-                    context.state.user['intent'] = undefined;
+                    //model.response = `Done with result: ${JSON.stringify(result)}`;
+                    //{“success”:true,“error”:null,“data”:{“userId”:“default-user”,“storeId”:“milan”,“agentId”:null,“date”:“2018-05-05”,“id”:“a270c435-a44d-baab-a4bf-308d3f0f0754”}}
+                    if (!result.error) {
+                        let appointment = result.data;
+                        model.response = MessageStyler.attachment(CardStyler.heroCard(`At ${appointment.date} in ${appointment.storeId} with ${appointment.agentId}`, [], []));
+                        model.continue = false;
+                        context.state.user['intent'] = undefined;
+                    } else {
+                        model.response = data.error;
+                        model.continue = false;
+                        context.state.user['intent'] = undefined;
+                    }
                 })
                 .then(result => resolve(model))
                 .catch(err => context.reply(`Oops, i got an error: ${err}`));
@@ -98,6 +109,7 @@ const doIt = (context, luisIntent) => {
 
             let model = {};
             model.done = true;
+            model.continue = true;
 
             return apmtConnector.getAppointments({})
             .then(result => {
@@ -113,17 +125,21 @@ const doIt = (context, luisIntent) => {
                     if (myAppointment.length === 0) {
                         //TODO chiedere se vuole un appuntamento
                         model.response = `You don't have any appointment`;
+                        model.continue = false;
                         context.state.user['intent'] = undefined;
                     } else if (myAppointment.length === 1) {
                         model.response = MessageStyler.attachment(myAppointment[0]);
+                        model.continue = false;
                         context.state.user['intent'] = undefined;
                     } else {
                         model.response = MessageStyler.carousel(myAppointment);
+                        model.continue = false;
                         context.state.user['intent'] = undefined;
                     }
                 } else {
                     model.response = `BOH with result: ${JSON.stringify(result)}`;
                     context.state.user['intent'] = undefined;
+                    model.continue = false;
                     model.done = false;
                 }
                 
