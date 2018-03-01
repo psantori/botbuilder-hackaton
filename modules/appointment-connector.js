@@ -44,7 +44,8 @@ const fetchData = (url, options) => {
             method: options.method || 'GET',
             body: options.body,
             headers: {
-                "Content-type": 'application/json'
+                "Content-type": 'application/json',
+                "X-Auth": process.env.TOKEN
             }
         })
         .then(result => result.json())

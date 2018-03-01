@@ -49,9 +49,7 @@ const INTENTS = {
 
 // Create server
 var server = express();
-var port = process.env.PORT || 3978;        // set our port
 var router = express.Router(); 
-
 
 // Create adapter and listen to servers '/api/messages' route.
 const adapter = new BotFrameworkAdapter({ 
@@ -63,7 +61,11 @@ router.post('/api/messages', adapter.listen());
 server.use(bodyParser.urlencoded({ extended: true }));
 server.use(bodyParser.json());
 server.use('/', router);
-server.listen(port);
+server.listen(process.env.port || process.env.PORT || 3978, function () {
+    console.log(`${server.name} listening`);
+});
+
+console.log();
 
 const clearPrompt = (context) => {
     context.state.user['prompt'] = undefined;
