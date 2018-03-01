@@ -1,10 +1,13 @@
-const { Bot, BotStateManager, MemoryStorage } = require('botbuilder');
+require('dotenv').config();
+const { Bot, BotStateManager, MemoryStorage, MessageStyler, CardStyler } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
-const restify = require('restify');
+const express = require('express');
+const bodyParser = require('body-parser');
 const agentsManager = require('./agentsManager.js');
 const cmdManager = require('./cmdManager.js');
 const sprintf = require('sprintf').sprintf;
 
+const agentIds = ['agent-007'];
 const handOffs = [];
 
 const getAgentHandOff = (conversationReference) => {
@@ -49,59 +52,62 @@ const getListeningAgent = () => {
     return agentsManager.findListeningAgent();
 }
 
+const generateMenuBtns = () => {
+	return MessageStyler.suggestedActions(['Book a visit to a store', 'Talk to human assistant']);
+}
 
 // Create server
-let server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, function () {
-    console.log(`${server.name} listening to ${server.url}`);
-});
+const server = express();
+const router = express.Router(); 
+
 
 // Create adapter and listen to servers '/api/messages' route.
 const adapter = new BotFrameworkAdapter({ 
     appId: process.env.MICROSOFT_APP_ID, 
     appPassword: process.env.MICROSOFT_APP_PASSWORD 
 });
-server.post('/api/messages', adapter.listen());
-
+router.post('/api/messages', adapter.listen());
+server.use(bodyParser.urlencoded({ extended: true }));
+server.use(bodyParser.json());
+server.use('/', router);
+server.listen(process.env.port || process.env.PORT || 3978, function () {
+    console.log(`${server.name} listening to ${this.address().address}:${this.address().port}`);
+});
 // Initialize bot by passing it adapter
 const bot = new Bot(adapter);	
 bot.use(new MemoryStorage());
 bot.use(new BotStateManager());
-bot.use(cmdManager);
+// bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
-	const command = context.state.conversation.command;
-	
-	if (command && command.isCommand) {
-		let promise = null;
-		let responseMsg = null;
-		switch (command.cmdString) {
-			case 'login':
-				promise = agentsManager.addAgent(context.conversationReference);
-				break;
-			case 'logout':
-				promise = agentsManager.delAgent(context.conversationReference);
-				break;
-			case 'end':
-				promise = agentsManager.setListening(context.conversationReference);
-				break;
-			case 'agents':
-				promise = agentsManager.getAgents(context.conversationReference);
-				break;
+	if (context.request.type === 'conversationUpdate' && context.request.membersAdded && 
+		context.request.membersAdded.length && context.request.membersAdded[0].name === 'Bot') {
+		return;
+	}
+	const isAgent = agentIds.includes(context.request.from.id);
+	if (context.request.type === 'conversationUpdate') {
+		if (isAgent) {
+			context.reply(`Welcome agent ${context.request.from.name}`);
+		} else {
+			const msg = generateMenuBtns();
+			msg.text = `Welcome ${context.request.from.name}\n\rHow can I help you?`;
+			context.reply(msg);			
 		}
-		if (promise) {
-			promise
-				.then(result => {
-					responseMsg = sprintf(command.command.successMsg, result);
-					context.reply(responseMsg);
-				})
-				.catch( err => {
-					rensponseMsg = sprintf(command.command.failureMsg, err);
-					context.reply(responseMsg);
-				});
-	
+	} else if (context.request.type === 'message') {
+		if (isAgent) {
+			context.reply('Oops, nobody is listening!');
+		} else {
+			const message = context.request.text;
+			if (message === 'Talk to human assistant') {
+				context.reply('Please wait, you will be connected to a sales agent soon...');
+				context.showTyping();
+
+			} else {
+				const msg = generateMenuBtns();
+				msg.text = `Please, select one of the suggested actions.`;
+				context.reply(msg);
+			}
 		}
-		
 	}
 	
 });
