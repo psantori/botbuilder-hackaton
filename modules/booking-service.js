@@ -85,18 +85,28 @@ const doIt = (context, luisIntent) => {
                     userId: context.request.from.id
                 })
                 .then(result => {
+
                     //model.response = `Done with result: ${JSON.stringify(result)}`;
                     //{“success”:true,“error”:null,“data”:{“userId”:“default-user”,“storeId”:“milan”,“agentId”:null,“date”:“2018-05-05”,“id”:“a270c435-a44d-baab-a4bf-308d3f0f0754”}}
                     if (!result.error) {
                         let appointment = result.data;
                         model.response = MessageStyler.attachment(CardStyler.heroCard(`At ${appointment.date} in ${appointment.storeId} with ${appointment.agentId}`, [], []));
                         model.continue = false;
+                        context.state.user['intent'].date = null;
+                        context.state.user['intent'].storeId = null;
+                        context.state.user['intent'].agentId = null;
+                        context.state.user['intent'].userId = null;
                         context.state.user['intent'] = undefined;
                     } else {
                         model.response = data.error;
                         model.continue = false;
+                        context.state.user['intent'].date = null;
+                        context.state.user['intent'].storeId = null;
+                        context.state.user['intent'].agentId = null;
+                        context.state.user['intent'].userId = null;
                         context.state.user['intent'] = undefined;
                     }
+
                 })
                 .then(result => resolve(model))
                 .catch(err => context.reply(`Oops, i got an error: ${err}`));

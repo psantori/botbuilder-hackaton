@@ -119,7 +119,9 @@ bot.onReceive((context) => {
 									context.reply(result.response);
 								}
 								if (!result.continue) {
-									context.reply("Good bye");
+									const msg = generateMenuBtns();
+									//msg.text = `Welcome ${context.request.from.name}\n\rHow can I help you?`;
+									context.reply(msg);	
 								}
 							})
 							.catch(err => console.log(err));
