@@ -1,6 +1,6 @@
 'use strict';
 require('dotenv').config();
-const { Bot, BotStateManager, MemoryStorage } = require('botbuilder');
+const { Bot, BotStateManager, MemoryStorage, MessageStyler, CardStyler } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
 const restify = require('restify');
 const apmtConnector = require('./modules/appointment-connector.js');
@@ -143,10 +143,28 @@ bot.onReceive((context) => {
                     .catch(err => context.reply(`Oops, i got an error: ${err}`));
                     
                 } else if (prompt == 'show') {
-                    context.reply('I will show your appointment: \n' + JSON.stringify(userIntent, null, 2));
                     return apmtConnector.getAppointments({})
                     .then(result => {
-                        return context.reply(`Done with result: ${JSON.stringify(result)}`);
+                        if (result.success) {
+                            let myAppointment = [];
+                            result.data.forEach(element => {
+                                myAppointment.push(
+                                    CardStyler.heroCard(`At ${element.date} in ${element.storeId} with ${element.agentId}`, [], [])
+                                );
+                            });
+                            
+                            if (myAppointment.length === 0) {
+                                //TODO chiedere se vuole un appuntamento
+                                return context.reply("You don't have any appointment");
+                            } else if (myAppointment.length === 1) {
+                                return context.reply(MessageStyler.attachment(myAppointment[0]));
+                            } else {
+                                return context.reply(MessageStyler.carousel(myAppointment));
+                            }
+                        } else {
+                            return context.reply(`BOH with result: ${JSON.stringify(result)}`);
+                        }
+                        
                     })
                     .catch(err => context.reply(`Oops, i got an error: ${err}`));
                 }    
