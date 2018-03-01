@@ -120,7 +120,7 @@ bot.onReceive((context) => {
 								}
 								if (!result.continue) {
 									const msg = generateMenuBtns();
-									//msg.text = `Welcome ${context.request.from.name}\n\rHow can I help you?`;
+									msg.text = `What else can I do for you?`;
 									context.reply(msg);	
 								}
 							})
