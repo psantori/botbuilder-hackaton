@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/contactlab/botbuilder-hackaton#readme",
   "dependencies": {
-    "windows-build-tools": "2.2.1",
     "botbuilder": "^4.0.0-m1.7",
     "botbuilder-ai": "^4.0.0-m1.7",
     "botbuilder-services": "^4.0.0-m1.7",
