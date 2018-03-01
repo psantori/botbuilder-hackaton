@@ -2,7 +2,8 @@
 require('dotenv').config();
 const { Bot, BotStateManager, MemoryStorage, MessageStyler, CardStyler } = require('botbuilder');
 const { BotFrameworkAdapter } = require('botbuilder-services');
-const restify = require('restify');
+const express = require('express');
+var bodyParser = require('body-parser');
 const apmtConnector = require('./modules/appointment-connector.js');
 const luisConnector = require('./modules/luis-connector.js');
 const createIntent = require('./modules/create-intent.js');
@@ -47,17 +48,22 @@ const INTENTS = {
 };
 
 // Create server
-let server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, function () {
-    console.log(`${server.name} listening to ${server.url}`);
-});
+var server = express();
+var port = process.env.PORT || 3978;        // set our port
+var router = express.Router(); 
+
 
 // Create adapter and listen to servers '/api/messages' route.
 const adapter = new BotFrameworkAdapter({ 
     appId: process.env.MICROSOFT_APP_ID, 
     appPassword: process.env.MICROSOFT_APP_PASSWORD 
 });
-server.post('/api/messages', adapter.listen());
+
+router.post('/api/messages', adapter.listen());
+server.use(bodyParser.urlencoded({ extended: true }));
+server.use(bodyParser.json());
+server.use('/', router);
+server.listen(port);
 
 const clearPrompt = (context) => {
     context.state.user['prompt'] = undefined;
