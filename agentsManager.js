@@ -9,6 +9,7 @@ const STATUS = {
 }
 
 
+
 const agentModel = () => {
     return {
         conversationReference: null,
@@ -16,6 +17,12 @@ const agentModel = () => {
         name: null,
         status: null
     }
+}
+
+const getAgentCount = () => {
+    return new Promise((resolve, reject) => {
+        resolve(Object.keys(agents).length);
+    });
 }
 
 const addAgent = (conversationReference) => {
@@ -31,6 +38,7 @@ const addAgent = (conversationReference) => {
                 toAdd.name = conversationReference.user.name;
                 toAdd.status = STATUS.listening;
                 agents[toAdd.id] = toAdd;
+                ++agentCounts;
                 resolve(toAdd);
             }
         })
@@ -48,6 +56,7 @@ const delAgent = (conversationReference) => {
             } else {
                 const toDel = agents[conversationReference.user.id];
                 agents[conversationReference.user.id] = undefined;
+                --agentCounts;
                 resolve(toDel);
             }
         })
@@ -87,7 +96,16 @@ const setStatus = (agentId, status) => {
 
 const getAgents = (conversationReference) => {
     return new Promise((resolve, reject) => {
-        resolve(Object.keys(agents).map(agentId => Object.assign({}, agents[agentId], {conversationReference: undefined})));
+        resolve(Object.keys(agents)
+                .map(agentId => `Id: ${agents[agentId].id}, Name: ${agents[agentId].name}, Status: ${agents[agentId].status}`).join('\n\r')
+            );
+    });
+}
+
+const findListeningAgent = () => {
+    return new Promise((resolve, reject) => {
+        const foundId = Object.keys(agents).find(agentId => agents[agentId].status === STATUS.listening);
+        resolve(agents[foundId]);
     });
 }
 
@@ -98,16 +116,16 @@ const setOnline = (conversationReference) => setStatus(conversationReference.use
 
 const me = (conversationReference) => findAgent(conversationReference.user.id);
 
-
-
 module.exports = {
     addAgent,
     delAgent,
     findAgent,
+    findListeningAgent,
     setListening,
     setBusy,
     setOffline,
     setOnline,
     getAgents,
+    getAgentCount,
     me
 }

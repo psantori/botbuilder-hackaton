@@ -5,6 +5,51 @@ const agentsManager = require('./agentsManager.js');
 const cmdManager = require('./cmdManager.js');
 const sprintf = require('sprintf').sprintf;
 
+const handOffs = [];
+
+const getAgentHandOff = (conversationReference) => {
+    return new Promise((resolve, reject) => {
+        const found = handOffs.find(hf => hf.agentRef.coversationId === conversationReference.conversationId);
+        resolve(found);
+    });
+}
+
+const getUserHandOff =  (conversationReference) => {
+    return new Promise((resolve, reject) => {
+        const found = handOffs.find(hf => hf.userRef.coversationId === conversationReference.conversationId);
+        resolve(found);
+    });
+}
+
+const addHandOff = (agentRef, userRef) => {
+    return new Promise((resolve, reject) => {
+        const handoff = {
+            agentRef: agentRef,
+            userRef: userRef
+        };
+        handOffs.push(handoff);
+        resolve(handoff);
+    });
+}
+
+const delHandOff = (agentRef, userRef) => {
+    return new Promise((resolve, reject) => {
+        const foundIndex = handOffs.findIndex(
+            hf => hf.agentRef.coversationId === agentRef.conversationId || hf.userRef === userRef.conversationId
+        );
+        let deleted = null;
+        if (foundIndex >= 0) {
+            deleted = handOffs.splice(foundIndex, 1);
+        }
+        resolve(deleted);
+    });
+}
+
+const getListeningAgent = () => {
+    return agentsManager.findListeningAgent();
+}
+
+
 // Create server
 let server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function () {
