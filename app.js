@@ -11,6 +11,14 @@ const sprintf = require('sprintf').sprintf;
 const agentIds = ['agent-007'];
 const handOffs = [];
 
+const { LuisRecognizer } = require('botbuilder-ai');
+
+const luis = new LuisRecognizer({
+    serviceEndpoint: 'https://westeurope.api.cognitive.microsoft.com',
+    appId: process.env.LUIS_APP_ID,
+    subscriptionKey: process.env.LUIS_SUBSCRIPTION_KEY
+});
+
 const getAgentHandOff = (conversationReference) => {
     return new Promise((resolve, reject) => {
         const found = handOffs.find(hf => hf.agentRef.coversationId === conversationReference.conversationId);
@@ -54,7 +62,7 @@ const getListeningAgent = () => {
 }
 
 const generateMenuBtns = () => {
-	return MessageStyler.suggestedActions(['Book a visit to a store', 'Talk to human assistant']);
+	return MessageStyler.suggestedActions(['Handle your appointment', 'Talk to human assistant']);
 }
 
 // Create server
@@ -98,24 +106,39 @@ bot.onReceive((context) => {
 		if (isAgent) {
 			context.reply('Oops, nobody is listening!');
 		} else {
-			const message = context.request.text;
-			if (message === 'Talk to human assistant') {
-				context.reply('Please wait, you will be connected to a sales agent soon...');
-				context.showTyping();
-			} else if (message === 'Book a visit to a store') {
-				context.reply('Questo spazio è di Giada');
-				bookingService.doIt(context)
-					.then(result => {
-						console.log('booking service response ', result);
-						if (result.done) {
-							context.reply(result.response);
-						}
-					})
-					.catch(err => console.log(err));
+			if (context.state.conversation['action'] === 'booking') {
+				return luis.recognize(context)
+				.then(result => {
+					return LuisRecognizer.findTopIntent(result)
+						.then(result => {
+							console.log("luis result " + result);
+							return bookingService.doIt(context, result)
+							.then(result => {
+								console.log('booking service response: ', result);
+								if (result.done) {
+									context.reply(result.response);
+								}
+							})
+							.catch(err => console.log(err));
+						});
+				});
+				
 			} else {
-				const msg = generateMenuBtns();
-				msg.text = `Please, select one of the suggested actions.`;
-				context.reply(msg);
+				const message = context.request.text;
+				if (message === 'Talk to human assistant') {
+					context.reply('Please wait, you will be connected to a sales agent soon...');
+					context.showTyping();
+				} else if (message === 'Handle your appointment') {
+					let bookingServiceResponse  = bookingService.start(context);
+					console.log('booking service response: ', bookingServiceResponse)
+					if (bookingServiceResponse.done) {
+						context.reply(bookingServiceResponse.response);
+					}
+				} else {
+					const msg = generateMenuBtns();
+					msg.text = `Please, select one of the suggested actions.`;
+					context.reply(msg);
+				}
 			}
 		}
 	}
