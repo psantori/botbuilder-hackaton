@@ -3,6 +3,7 @@
 const { LuisRecognizer } = require('botbuilder-ai');
 const { MessageStyler, CardStyler } = require('botbuilder');
 const createIntent = require('./create-intent.js');
+const showIntent = require('./show-intent.js');
 const apmtConnector = require('./appointment-connector.js');
 
 const luis = new LuisRecognizer({
@@ -65,7 +66,7 @@ const doIt = (context, luisIntent) => {
         const message = context.request.text;
         let model = start(context, `I'm sorry, I don't understood.`);
 
-        if (message === 'Take an appointment' || context.state.user['intent'].action === INTENTS['create-appointment'].action) {
+        if (message === 'Take an appointment' || (context.state.user['intent'] && context.state.user['intent'].action === INTENTS['create-appointment'].action)) {
             console.log('start take an appointment');
             const intent = INTENTS['create-appointment'];
             context.state.user['intent'] = intent; 
@@ -84,10 +85,51 @@ const doIt = (context, luisIntent) => {
                 })
                 .then(result => {
                     model.response = `Done with result: ${JSON.stringify(result)}`;
+                    context.state.user['intent'] = undefined;
                 })
                 .then(result => resolve(model))
                 .catch(err => context.reply(`Oops, i got an error: ${err}`));
             }
+        } else if (message === 'List my appointment' || (context.state.user['intent'] && context.state.user['intent'].action === INTENTS['show-appointment'].action)) {
+            console.log('start list an appointment');
+            const intent = INTENTS['show-appointment'];
+            context.state.user['intent'] = intent; 
+            let userIntent = context.state.user['intent'];
+
+            let model = {};
+            model.done = true;
+
+            return apmtConnector.getAppointments({})
+            .then(result => {
+                if (result.success) {
+                    //writeAppointmentCard(context, result.data);
+                    let myAppointment = [];
+                    result.data.forEach(element => {
+                        myAppointment.push(
+                            CardStyler.heroCard(`At ${element.date} in ${element.storeId} with ${element.agentId}`, [], [])
+                        );
+                    });
+                    
+                    if (myAppointment.length === 0) {
+                        //TODO chiedere se vuole un appuntamento
+                        model.response = `You don't have any appointment`;
+                        context.state.user['intent'] = undefined;
+                    } else if (myAppointment.length === 1) {
+                        model.response = MessageStyler.attachment(myAppointment[0]);
+                        context.state.user['intent'] = undefined;
+                    } else {
+                        model.response = MessageStyler.carousel(myAppointment);
+                        context.state.user['intent'] = undefined;
+                    }
+                } else {
+                    model.response = `BOH with result: ${JSON.stringify(result)}`;
+                    context.state.user['intent'] = undefined;
+                    model.done = false;
+                }
+                
+            })
+            .then(result => resolve(model))
+            .catch(err => context.reply(`Oops, i got an error: ${err}`));
         } else {
             resolve(model);
         }
