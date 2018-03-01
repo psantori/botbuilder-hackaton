@@ -64,7 +64,7 @@ const doIt = (context, luisIntent) => {
     return new Promise((resolve, reject) => {
         console.log("booking service doIt");
         const message = context.request.text;
-        let model = start(context, `I'm sorry, I don't understood.`);
+        let model = start(context, ``);
         model.continue = true;
 
         if (message === 'Take an appointment' || (context.state.user['intent'] && context.state.user['intent'].action === INTENTS['create-appointment'].action)) {
