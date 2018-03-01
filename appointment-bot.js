@@ -67,6 +67,24 @@ const startPrompt = (context, action) => {
     context.state.user['prompt'] = action;
 }
 
+const writeAppointmentCard = (context, appointment) => {
+    let myAppointment = [];
+    appointment.forEach(element => {
+        myAppointment.push(
+            CardStyler.heroCard(`At ${element.date} in ${element.storeId} with ${element.agentId}`, [], [])
+        );
+    });
+    
+    if (myAppointment.length === 0) {
+        //TODO chiedere se vuole un appuntamento
+        return context.reply("You don't have any appointment");
+    } else if (myAppointment.length === 1) {
+        return context.reply(MessageStyler.attachment(myAppointment[0]));
+    } else {
+        return context.reply(MessageStyler.carousel(myAppointment));
+    }   
+}
+
 const checkIntent = (context, intent, action) => {
     let result = false;
     if ((!context.state.user['intent'] && intent.action === action) 
@@ -146,7 +164,8 @@ bot.onReceive((context) => {
                     return apmtConnector.getAppointments({})
                     .then(result => {
                         if (result.success) {
-                            let myAppointment = [];
+                            writeAppointmentCard(context, result.data);
+                            /*let myAppointment = [];
                             result.data.forEach(element => {
                                 myAppointment.push(
                                     CardStyler.heroCard(`At ${element.date} in ${element.storeId} with ${element.agentId}`, [], [])
@@ -160,7 +179,7 @@ bot.onReceive((context) => {
                                 return context.reply(MessageStyler.attachment(myAppointment[0]));
                             } else {
                                 return context.reply(MessageStyler.carousel(myAppointment));
-                            }
+                            }*/
                         } else {
                             return context.reply(`BOH with result: ${JSON.stringify(result)}`);
                         }

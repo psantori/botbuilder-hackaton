@@ -46,11 +46,15 @@ const checkEntities = (context, userState, luisIntent) => {
             if (!context.state.user['promptStatus']) {
                 missing = 'Do you want select Store Assistant?';
                 context.state.user['promptStatus'] = 'ask-sa';
-            } else if (context.request.text.toLowerCase() == 'yes') {
-                missing = MessageStyler.carousel([
-                    CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/women/44.jpg'], ['Vivian']),
-                    CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/men/49.jpg'], ['Gerard'])
-                  ]);
+            } else if (context.state.user['promptStatus'] == 'ask-sa'){
+                if (context.request.text.toLowerCase().indexOf('yes') > -1) {
+                    missing = MessageStyler.carousel([
+                        CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/women/44.jpg'], ['Vivian']),
+                        CardStyler.heroCard(null, ['https://randomuser.me/api/portraits/men/49.jpg'], ['Gerard'])
+                    ]);
+                } else if (context.request.text.toLowerCase().indexOf('no') > -1) {
+                    missing = undefined;
+                }
             } else if (context.request.text.toLowerCase() != 'vivian' || context.request.text.toLowerCase() != 'michael') {
                 missing = context.request.text + ' isn\'t available. Only Vivian or Michael';
             } 
