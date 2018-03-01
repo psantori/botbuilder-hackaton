@@ -2,7 +2,7 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
-const baseUrl = 'http://fff27279.ngrok.io/';
+const baseUrl = 'https://booking-bot-apis.azurewebsites.net/';
 const endpoint = 'bookings/'
 let mockAppointments = [];
 
