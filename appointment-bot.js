@@ -59,23 +59,38 @@ const adapter = new BotFrameworkAdapter({
 });
 server.post('/api/messages', adapter.listen());
 
+const clearPrompt = (context) => {
+    context.state.user['prompt'] = undefined;
+}
+
+const startPrompt = (context, action) => {
+    context.state.user['prompt'] = action;
+}
+
+const checkIntent = (context, intent, action) => {
+    let result = false;
+    if ((!context.state.user['intent'] && intent.action === action) 
+    || (context.state.user['intent'] && context.state.user['intent'].action === action)) {
+        if(!context.state.user['intent']) {
+            context.state.user['intent'] = intent; 
+            startPrompt(context, action);
+        }
+        result = true;
+    }
+
+    return result;
+}
+
 const parseIntent = (context, userState, luisIntent) => {
     const intent = INTENTS[luisIntent.name];
     
-    if ((!userState['intent'] && intent.action === 'create') || (userState['intent'] && userState['intent'].action === 'create')) {
-        if(!userState['intent']) {
-            userState['intent'] = intent; 
-        }
+    if (checkIntent(context, intent, 'create')) {
         return createIntent.checkEntities(context, userState, luisIntent);
-    } else if ((!userState['intent'] && intent.action === 'delete') || (userState['intent'] && userState['intent'].action === 'delete')) {
-        if(!userState['intent']) {
-            userState['intent'] = intent; 
-        }
+    } else if (checkIntent(context, intent, 'delete')) { 
+    
         return deleteIntent.checkEntities(context, userState, luisIntent);
-    } else if ((!userState['intent'] && intent.action === 'show') || (userState['intent'] && userState['intent'].action === 'show')) {
-        if(!userState['intent']) {
-            userState['intent'] = intent; 
-        }
+    } else if (checkIntent(context, intent, 'show')) { 
+    
         return showIntent.checkEntities(context, userState, luisIntent);
     }
     return false;
@@ -100,8 +115,10 @@ bot.onReceive((context) => {
             if (result) {
                 const userIntent = context.state.user['intent'];
                 context.state.user['intent'] = undefined;
+                const prompt = context.state.user['prompt'];
+                clearPrompt(context);
                 
-                if (userIntent.action == 'create') {
+                if (prompt == 'create') {
                     context.reply('I will create: \n' + JSON.stringify(userIntent, null, 2));
                     return apmtConnector.setAppointment({
                         date: userIntent.date,
@@ -113,7 +130,7 @@ bot.onReceive((context) => {
                         return context.reply(`Done with result: ${JSON.stringify(result)}`);
                     })
                     .catch(err => context.reply(`Oops, i got an error: ${err}`));
-                } else if (userIntent.action == 'delete') {
+                } else if (prompt == 'delete') {
                     context.reply('I will delete: \n' + JSON.stringify(userIntent, null, 2));
                     return apmtConnector.getAppointments({date: userIntent.date, userId: context.request.from.id})
                     .then(result => {
@@ -125,7 +142,7 @@ bot.onReceive((context) => {
                     .then(result => context.reply(result && result.success?'Done':`Error: ${result?result.error:''}`))
                     .catch(err => context.reply(`Oops, i got an error: ${err}`));
                     
-                } else if (userIntent.action == 'show') {
+                } else if (prompt == 'show') {
                     context.reply('I will show your appointment: \n' + JSON.stringify(userIntent, null, 2));
                     return apmtConnector.getAppointments({})
                     .then(result => {
