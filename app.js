@@ -26,6 +26,7 @@ const bot = new Bot(adapter);
 // bot.use(new MemoryStorage());
 // bot.use(new BotStateManager());
 bot.onReceive((context) => {
+    console.log(`onReceive activity: ${context.request.type}`);
     if (context.request.type === 'message') {
         context.reply(context.request.text);
 
