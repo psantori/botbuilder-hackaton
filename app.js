@@ -10,8 +10,8 @@ var router = express.Router();
 
 // Create adapter and listen to servers '/api/messages' route.
 const adapter = new BotFrameworkAdapter({ 
-    appId: process.env.MICROSOFT_APP_ID1, 
-    appPassword: process.env.MICROSOFT_APP_PASSWORD1 
+    appId: process.env.MICROSOFT_APP_ID, 
+    appPassword: process.env.MICROSOFT_APP_PASSWORD 
 });
 
 router.post('/api/messages', adapter.listen());
