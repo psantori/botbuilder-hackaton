@@ -14,6 +14,8 @@ const handOffs = [];
 
 const { LuisRecognizer } = require('botbuilder-ai');
 
+let lastPostLuisIntent = undefined;
+let lastPostLuisPrompt = undefined;
 const luis = new LuisRecognizer({
     serviceEndpoint: 'https://westeurope.api.cognitive.microsoft.com',
     appId: process.env.LUIS_APP_ID,
@@ -304,10 +306,13 @@ bot.onReceive((context) => {
 	}
 	if (context.request.type === 'message' && context.state.conversation['action'] === 'booking') {
 		const convRef = context.conversationReference;
+		
 		return luis.recognize(context)
 				.then(result => {
 					return LuisRecognizer.findTopIntent(result)
 						.then(result => {
+							context.state.user.intent = lastPostLuisIntent;
+							context.state.user.promptStatus = lastPostLuisPrompt;
 							console.log("luis result " + result);
 							return bookingService.doIt(context, result)
 							.then(result => {
@@ -315,6 +320,8 @@ bot.onReceive((context) => {
 								if (!result.continue) {
 									context.state.conversation['action'] = undefined;
 								}
+								lastPostLuisIntent = result.intent;
+								lastPostLuisPrompt = result.promptStatus;
 								bot.createContext(convRef, (context) => {
 									if (result.done) {
 										context.reply(result.response);
@@ -363,6 +370,7 @@ bot.onReceive((context) => {
 								.then(result => resolve())
 								.catch(err => reject(err));
 							} else if (message === 'Handle your appointment') {
+								context.state.conversation['action'] = 'booking';
 								let bookingServiceResponse  = bookingService.start(context);
 								console.log('booking service response: ', bookingServiceResponse)
 								if (bookingServiceResponse.done) {
@@ -373,7 +381,7 @@ bot.onReceive((context) => {
 								const msg = generateMenuBtns();
 								msg.text = `Please, select one of the suggested actions.`;
 								context.reply(msg);
-								resovle();
+								resolve();
 							}
 					}
 				}

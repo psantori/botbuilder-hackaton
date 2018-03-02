@@ -51,7 +51,7 @@ const INTENTS = {
 
 const start = (context, text) => {
     console.log("booking service start");
-    context.state.conversation['action'] = 'booking';
+    // context.state.conversation['action'] = 'booking';
     let model = {};
     model.done = true;
     model.response = MessageStyler.suggestedActions(['Take an appointment', 'List my appointment']);
@@ -70,8 +70,10 @@ const doIt = (context, luisIntent) => {
         if (message === 'Take an appointment' || (context.state.user['intent'] && context.state.user['intent'].action === INTENTS['create-appointment'].action)) {
             console.log('start take an appointment');
             const intent = INTENTS['create-appointment'];
+            model.intent = intent;
             context.state.user['intent'] = intent; 
             let createNextStep = createIntent.checkEntities(context, context.state.user, luisIntent);
+            model.promptStatus = context.state.user['promptStatus'];
             if (createNextStep) {
                 model.response = createNextStep;
                 resolve(model);
@@ -96,7 +98,7 @@ const doIt = (context, luisIntent) => {
                         context.state.user['intent'].storeId = null;
                         context.state.user['intent'].agentId = null;
                         context.state.user['intent'].userId = null;
-                        context.state.user['intent'] = undefined;
+                        context.state.user['intent'] = null;
                     } else {
                         model.response = data.error;
                         model.continue = false;
@@ -104,9 +106,9 @@ const doIt = (context, luisIntent) => {
                         context.state.user['intent'].storeId = null;
                         context.state.user['intent'].agentId = null;
                         context.state.user['intent'].userId = null;
-                        context.state.user['intent'] = undefined;
+                        context.state.user['intent'] = null;
                     }
-
+                    model.intent = context.state.user['intent'];
                 })
                 .then(result => resolve(model))
                 .catch(err => context.reply(`Oops, i got an error: ${err}`));
@@ -152,11 +154,12 @@ const doIt = (context, luisIntent) => {
                     model.continue = false;
                     model.done = false;
                 }
-                
+                model.intent = context.state.user['intent'];
             })
             .then(result => resolve(model))
             .catch(err => context.reply(`Oops, i got an error: ${err}`));
         } else {
+            model.intent = context.state.user['intent'];
             resolve(model);
         }
     });   
