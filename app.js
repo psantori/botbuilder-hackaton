@@ -107,7 +107,7 @@ const sendPAQueueMessageToAgents = () => {
 }
 
 const generateMenuBtns = () => {
-	return MessageStyler.suggestedActions(['Book a visit to a store', 'Talk to human assistant']);
+	return MessageStyler.suggestedActions(['Handle your appointment', 'Talk to human assistant']);
 }
 
 const generateSuggestedActions = (acts) => {
@@ -230,6 +230,7 @@ const manageAgentMessage = (context) => {
 const connectToHuman = (context) => {
 	return new Promise((resolve, reject) => {
 		let user = null;
+		context.state.conversation['action'] = 'talking';
 		usersManager.addUser(context.conversationReference)
 		.then(result => {
 			if (result.status === usersManager.STATUS.waiting) {
@@ -292,16 +293,54 @@ bot.onReceive((context) => {
 				// context.reply('Oops, nobody is listening!');
 			} else {
 				const message = context.request.text;
-				if (message === 'Talk to human assistant') {
-					context.showTyping();
-					connectToHuman(context)
-					.then(result => resolve())
-					.catch(err => reject(err));
-				} else {
-
-					const msg = generateMenuBtns();
-					msg.text = `Please, select one of the suggested actions.`;
-					context.reply(msg);
+				switch(context.state.conversation['action']) {
+					case 'talking':
+						// manageUserMessage(context)
+						// .then(result => resolve())
+						// .catch(err => reject(err));
+						resolve();
+					break;
+					case 'booking':
+						luis.recognize(context)
+						.then(result => {
+							return LuisRecognizer.findTopIntent(result)
+								.then(result => {
+									console.log("luis result " + result);
+									return bookingService.doIt(context, result)
+									.then(result => {
+										console.log('booking service response: ', result);
+										if (result.done) {
+											context.reply(result.response);
+										}
+										if (!result.continue) {
+											const msg = generateMenuBtns();
+											msg.text = `What else can I do for you?`;
+											context.reply(msg);	
+										}
+									})
+									.catch(err => console.log(err));
+								});
+						})
+						.then(result => resolve())
+						.catch(err => reject(err));
+					break;
+					default:
+						if (message === 'Talk to human assistant') {
+							context.showTyping();
+							connectToHuman(context)
+							.then(result => resolve())
+							.catch(err => reject(err));
+						} else if (message === 'Handle your appointment') {
+							let bookingServiceResponse  = bookingService.start(context);
+							console.log('booking service response: ', bookingServiceResponse)
+							if (bookingServiceResponse.done) {
+								context.reply(bookingServiceResponse.response);
+							}
+						} else {
+							const msg = generateMenuBtns();
+							msg.text = `Please, select one of the suggested actions.`;
+							context.reply(msg);
+						}
 				}
 			}
 		}
