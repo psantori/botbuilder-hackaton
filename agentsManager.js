@@ -81,7 +81,7 @@ const setStatus = (agentId, status) => {
                 result.status = status;
                 resolve(result);
             } else {
-                reject('Agente non trovato');
+                reject('Agent not found');
             }
         })
         .catch(err => reject(err));

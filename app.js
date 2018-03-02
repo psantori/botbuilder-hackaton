@@ -6,21 +6,30 @@ const bodyParser = require('body-parser');
 const agentsManager = require('./agentsManager.js');
 const usersManager = require('./usersManager.js');
 const cmdManager = require('./cmdManager.js');
+const bookingService = require('./modules/booking-service.js');
 const sprintf = require('sprintf').sprintf;
 
 const agentIds = ['default-user'];
 const handOffs = [];
 
+const { LuisRecognizer } = require('botbuilder-ai');
+
+const luis = new LuisRecognizer({
+    serviceEndpoint: 'https://westeurope.api.cognitive.microsoft.com',
+    appId: process.env.LUIS_APP_ID,
+    subscriptionKey: process.env.LUIS_SUBSCRIPTION_KEY
+});
+
 const getAgentHandOff = (conversationReference) => {
     return new Promise((resolve, reject) => {
-        const found = handOffs.find(hf => hf.agentRef.coversationId === conversationReference.conversationId);
+        const found = handOffs.find(hf => hf.agentRef.conversationId === conversationReference.conversationId);
         resolve(found);
     });
 }
 
 const getUserHandOff =  (conversationReference) => {
     return new Promise((resolve, reject) => {
-        const found = handOffs.find(hf => hf.userRef.coversationId === conversationReference.conversationId);
+        const found = handOffs.find(hf => hf.userRef.conversationId === conversationReference.conversationId);
         resolve(found);
     });
 }
@@ -39,7 +48,7 @@ const addHandOff = (agentRef, userRef) => {
 const delHandOff = (agentRef, userRef) => {
     return new Promise((resolve, reject) => {
         const foundIndex = handOffs.findIndex(
-            hf => hf.agentRef.coversationId === agentRef.conversationId || hf.userRef === userRef.conversationId
+            hf => hf.agentRef.conversationId === agentRef.conversationId || hf.userRef === userRef.conversationId
         );
         let deleted = null;
         if (foundIndex >= 0) {
@@ -170,9 +179,10 @@ const manageAgentMessage = (context) => {
 					.then(result => {
 						if (handOff) {
 							return [
-								sendPaMessageToContext(handOff.agentRef, `You are now connected with ${handOff.userRef.user.name}\n\rType "#!end" to disconnect`),
-								sendPaMessageToContext(handOff.userRef, `You are now connected with ${handOff.agentRef.user.name}`)
+								sendPaMessageToContext(handOff.agentRef, `You are now connected to ${handOff.userRef.user.name}\n\rType "#!end" to disconnect`),
+								sendPaMessageToContext(handOff.userRef, `You are now connected to ${handOff.agentRef.user.name}`),
 							];
+
 						}
 						return true;
 					})
@@ -187,6 +197,8 @@ const manageAgentMessage = (context) => {
 			break;
 			default:
 				if (context.state.conversation.command) {
+					const cmd = context.state.conversation.command;
+					context.state.conversation.command = undefined;
 					let handOff = null;
 					getAgentHandOff(context.conversationReference)
 					.then(result => handOff = result)
@@ -194,16 +206,19 @@ const manageAgentMessage = (context) => {
 					.then(result => {
 						if (result) {
 							const promises = [];
-							if (context.state.conversation.command.command.label === 'online') {
+							if (cmd.command.label === 'online') {
 								promises.push(agentsManager.setOnline(context.conversationReference));
 								promises.push(sendPAQueueMessageToAgent(result));
-							} else if (context.state.conversation.command.command.label === 'end') {
+							} else if (cmd.command.label === 'end') {
+								let msg = generateMenuBtns();
+								msg.text = `You are disconnected from ${handOff.agentRef.user.name}\n\rHow can I help you?`;
 								promises.push(sendPaMessageToContext(handOff.agentRef, `You are disconnected from ${handOff.userRef.user.name}`));
-								promises.push(sendPaMessageToContext(handOff.userRef, `You are disconnected from ${handOff.agentRef.user.name}`));
+								promises.push(sendPaMessageToContext(handOff.userRef, msg));
 								promises.push(agentsManager.setOnline(context.conversationReference));
+								promises.push(usersManager.setWaiting(handOff.userRef));
 								promises.push(delHandOff(context.conversationReference, null));
 								promises.push(sendPAQueueMessageToAgent(result));
-							} else if (context.state.conversation.command.command.label === 'me') {
+							} else if (cmd.command.label === 'me') {
 								promises.push(context.reply(`Name: ${result.name}\n\rStatus: ${result.status}`));
 							}
 							return promises;
@@ -227,15 +242,30 @@ const manageAgentMessage = (context) => {
 	})
 }
 
+const manageUserMessage = (context) => {
+	return new Promise((resolve, reject) => {
+		const message = context.request.text;
+		getUserHandOff(context.conversationReference)
+					.then(result => {
+						if (result) {
+							return sendPaMessageToContext(result.agentRef, context.request.text);
+						}
+						return true;
+					})
+					.then(result => resolve())
+					.catch(err => reject(err));
+	});
+};
+
 const connectToHuman = (context) => {
 	return new Promise((resolve, reject) => {
 		let user = null;
 		context.state.conversation['action'] = 'talking';
 		usersManager.addUser(context.conversationReference)
 		.then(result => {
-			if (result.status === usersManager.STATUS.waiting) {
+			// if (result.status === usersManager.STATUS.waiting) {
 				context.reply('Please wait, you will be connected to a sales agent soon');
-			}
+			// }
 			return user = result;
 		})
 		.then(result => sendPAQueueMessageToAgents())
@@ -268,82 +298,87 @@ bot.use(new BotStateManager());
 bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
-	/*if (context.request.type === 'conversationUpdate' && context.request.membersAdded && 
-		context.request.membersAdded.length && context.request.membersAdded[0].name === context.conversationReference.bot.name) {
-		return;
-	}*/
-	return new Promise((resolve, reject) => {
-		// const isAgent = agentIds.includes(context.request.from.id);
-		if (!context.state.user['isAgent'] && agentIds.includes(context.request.from.id)) {
-			context.state.user['isAgent'] = true;
-		}
-		if (context.request.type === 'conversationUpdate' && !context.state.conversation['welcomeSent']) {
-			context.state.conversation['welcomeSent'] = true;
-			sendWelcome(context)
-			.then(result => context.state.user['isAgent']?agentsManager.addAgent(context.conversationReference):true)
-			.then(result => resolve())
-			.catch(err => reject(err));
-			// .catch(err => console.log(err));
-		} else if (context.request.type === 'message') {
-			if (context.state.user['isAgent']) {
-				// context.showTyping();
-				manageAgentMessage(context)
+	if (context.request.type === 'message' && 
+		(context.request.text === 'Talk to human assistant' || context.request.text === 'Handle your appointment')) {
+		context.state.conversation['action'] = undefined;
+	}
+	if (context.request.type === 'message' && context.state.conversation['action'] === 'booking') {
+		const convRef = context.conversationReference;
+		return luis.recognize(context)
+				.then(result => {
+					return LuisRecognizer.findTopIntent(result)
+						.then(result => {
+							console.log("luis result " + result);
+							return bookingService.doIt(context, result)
+							.then(result => {
+								console.log('booking service response: ', result);
+								if (!result.continue) {
+									context.state.conversation['action'] = undefined;
+								}
+								bot.createContext(convRef, (context) => {
+									if (result.done) {
+										context.reply(result.response);
+									}
+									if (!result.continue) {
+										let msg = generateMenuBtns();
+										msg.text = `What else can I do for you?`;
+										context.reply(msg);	
+									}
+								});
+							})
+							.catch(err => console.log(err));
+						});
+				});
+	} else {
+		return new Promise((resolve, reject) => {
+			// const isAgent = agentIds.includes(context.request.from.id);
+			if (!context.state.user['isAgent'] && agentIds.includes(context.request.from.id)) {
+				context.state.user['isAgent'] = true;
+			}
+			if (context.request.type === 'conversationUpdate' && !context.state.conversation['welcomeSent']) {
+				context.state.conversation['welcomeSent'] = true;
+				sendWelcome(context)
+				.then(result => context.state.user['isAgent']?agentsManager.addAgent(context.conversationReference):true)
 				.then(result => resolve())
 				.catch(err => reject(err));
-				// context.reply('Oops, nobody is listening!');
-			} else {
-				const message = context.request.text;
-				switch(context.state.conversation['action']) {
-					case 'talking':
-						// manageUserMessage(context)
-						// .then(result => resolve())
-						// .catch(err => reject(err));
-						resolve();
-					break;
-					case 'booking':
-						luis.recognize(context)
-						.then(result => {
-							return LuisRecognizer.findTopIntent(result)
-								.then(result => {
-									console.log("luis result " + result);
-									return bookingService.doIt(context, result)
-									.then(result => {
-										console.log('booking service response: ', result);
-										if (result.done) {
-											context.reply(result.response);
-										}
-										if (!result.continue) {
-											const msg = generateMenuBtns();
-											msg.text = `What else can I do for you?`;
-											context.reply(msg);	
-										}
-									})
-									.catch(err => console.log(err));
-								});
-						})
+				// .catch(err => console.log(err));
+			} else if (context.request.type === 'message') {
+				if (context.state.user['isAgent']) {
+					// context.showTyping();
+					manageAgentMessage(context)
+					.then(result => resolve())
+					.catch(err => reject(err));
+					// context.reply('Oops, nobody is listening!');
+				} else {
+					const message = context.request.text;
+					if (context.state.conversation['action'] === 'talking') {
+						manageUserMessage(context)
 						.then(result => resolve())
 						.catch(err => reject(err));
-					break;
-					default:
+					} else { 
 						if (message === 'Talk to human assistant') {
-							context.showTyping();
-							connectToHuman(context)
-							.then(result => resolve())
-							.catch(err => reject(err));
-						} else if (message === 'Handle your appointment') {
-							let bookingServiceResponse  = bookingService.start(context);
-							console.log('booking service response: ', bookingServiceResponse)
-							if (bookingServiceResponse.done) {
-								context.reply(bookingServiceResponse.response);
+								context.state.conversation['action'] = 'talking';
+								context.showTyping();
+								connectToHuman(context)
+								.then(result => resolve())
+								.catch(err => reject(err));
+							} else if (message === 'Handle your appointment') {
+								let bookingServiceResponse  = bookingService.start(context);
+								console.log('booking service response: ', bookingServiceResponse)
+								if (bookingServiceResponse.done) {
+									context.reply(bookingServiceResponse.response);
+								}
+								resolve();
+							} else {
+								const msg = generateMenuBtns();
+								msg.text = `Please, select one of the suggested actions.`;
+								context.reply(msg);
+								resovle();
 							}
-						} else {
-							const msg = generateMenuBtns();
-							msg.text = `Please, select one of the suggested actions.`;
-							context.reply(msg);
-						}
+					}
 				}
 			}
-		}
-		resolve();
-	});
+			//resolve();
+		});	
+	}
 });

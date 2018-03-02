@@ -22,7 +22,7 @@ const parseIntent = (userState, luisIntent) => {
 }
 
 const checkEntities = (context, userState, luisIntent) => {
-    return new Promise((resolve, reject) => {
+    //return new Promise((resolve, reject) => {
         parseIntent(userState, luisIntent);
         let missing = null;
         /*if (!userState['intent'].date) {
@@ -40,7 +40,7 @@ const checkEntities = (context, userState, luisIntent) => {
             resolve(true);
         }
         
-    });
+    //});
 }
 
 module.exports = {
