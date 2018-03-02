@@ -217,8 +217,9 @@ const manageAgentMessage = (context) => {
 								promises.push(sendPaMessageToContext(handOff.agentRef, `You are disconnected from ${handOff.userRef.user.name}`));
 								promises.push(sendPaMessageToContext(handOff.userRef, msg));
 								promises.push(agentsManager.setOnline(context.conversationReference));
-								promises.push(usersManager.setWaiting(handOff.userRef));
-								promises.push(delHandOff(context.conversationReference, null));
+								// promises.push(usersManager.setWaiting(handOff.userRef));
+								promises.push(usersManager.delUser(handOff.userRef));
+								promises.push(delHandOff(context.conversationReference, handOff.userRef));
 								promises.push(sendPAQueueMessageToAgent(result));
 							} else if (cmd.command.label === 'me') {
 								promises.push(context.reply(`Name: ${result.name}\n\rStatus: ${result.status}`));
@@ -306,6 +307,12 @@ bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
 	console.log('OnReceive activity: ' + context.request.type);
+	if (context.request.type === 'message' && context.request.text === '#!reset') {
+		context.state.conversation = {};
+		context.state.user = {};
+		context.reply('Reset done');
+		return;
+	}
 	if (context.request.type === 'message' && 
 		(context.request.text === 'Talk to human assistant' || context.request.text === 'Handle your appointment')) {
 		context.state.conversation['action'] = undefined;
