@@ -19,22 +19,17 @@ const userModel = () => {
 
 const addUser = (conversationReference) => {
     return new Promise((resolve, reject) => {
-        findUser(conversationReference.user.id)
-        .then(result => {
-            if (result) {
-               reject('Agente già presente');
-            } else {
-                const toAdd = userModel();
-                toAdd.conversationReference = conversationReference;
-                toAdd.id = conversationReference.user.id;
-                toAdd.name = conversationReference.user.name;
-                toAdd.status = STATUS.waiting;
-                users[toAdd.id] = toAdd;
-                resolve(toAdd);
-            }
-        })
-        .catch(err => reject(err));
-        
+        const id = conversationReference.user.id;
+        let result = users[id];
+        if (!result) {
+            result = userModel();
+            result.conversationReference = conversationReference;
+            result.id = id;
+            result.name = conversationReference.user.name;
+            result.status = STATUS.waiting;
+            users[id] = result;
+        }
+        resolve(result);
     });
 }
 
@@ -43,7 +38,7 @@ const delUser = (conversationReference) => {
         findUser(conversationReference.user.id)
         .then(result => {
             if (!result) {
-                reject('Agente non trovato');
+                reject('User not found');
             } else {
                 const toDel = users[conversationReference.user.id];
                 users[conversationReference.user.id] = undefined;
@@ -56,7 +51,11 @@ const delUser = (conversationReference) => {
 
 const findUser = (userId) => {
     return new Promise((resolve, reject) => {
-        resolve(users[userId]);
+        if (users[userId]) {
+            resolve(users[userId]);
+        } else {
+            reject(`User ${userId} not found`);
+        } 
     });
 }
 
@@ -64,13 +63,13 @@ const findUser = (userId) => {
 
 const setStatus = (userId, status) => {
     return new Promise((resolve, reject) => {
-        findAgent(userId)
+        findUser(userId)
         .then(result => {
             if (result) {
                 result.status = status;
                 resolve(result);
             } else {
-                reject('Agente non trovato');
+                reject('User not found');
             }
         })
         .catch(err => reject(err));
@@ -83,10 +82,17 @@ const getUsers = (conversationReference) => {
     });
 }
 
-const findWaitingUser = () => {
+const nextWaitingUser = () => {
     return new Promise((resolve, reject) => {
-        const foundId = Object.keys(users).find(userId => users[userId].status === STATUS.listening);
+        const foundId = Object.keys(users).find(userId => users[userId].status === STATUS.waiting);
         resolve(users[foundId]);
+    });
+}
+
+const getWaitingCount = () => {
+    return new Promise((resolve, reject) => {
+        const countIds = Object.keys(users).filter(userId => users[userId].status === STATUS.waiting).length;
+        resolve(countIds);
     });
 }
 
@@ -98,12 +104,14 @@ const me = (conversationReference) => findUser(conversationReference.user.id);
 
 
 module.exports = {
+    STATUS,
     addUser,
     delUser,
     findUser,
-    findWaitingUser,
+    nextWaitingUser,
     setWaiting,
     setBusy,
     getUsers,
+    getWaitingCount,
     me
 }

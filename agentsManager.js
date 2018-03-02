@@ -27,23 +27,17 @@ const getAgentCount = () => {
 
 const addAgent = (conversationReference) => {
     return new Promise((resolve, reject) => {
-        findAgent(conversationReference.user.id)
-        .then(result => {
-            if (result) {
-               reject('Agente già presente');
-            } else {
-                const toAdd = agentModel();
-                toAdd.conversationReference = conversationReference;
-                toAdd.id = conversationReference.user.id;
-                toAdd.name = conversationReference.user.name;
-                toAdd.status = STATUS.listening;
-                agents[toAdd.id] = toAdd;
-                ++agentCounts;
-                resolve(toAdd);
-            }
-        })
-        .catch(err => reject(err));
-        
+        const id = conversationReference.user.id;
+        let result = agents[id];
+        if (!result) {
+            result = agentModel();
+            result.conversationReference = conversationReference;
+            result.id = id;
+            result.name = conversationReference.user.name;
+            result.status = STATUS.listening;
+            agents[id] = result;
+        }
+        resolve(result);
     });
 }
 
@@ -102,10 +96,17 @@ const getAgents = (conversationReference) => {
     });
 }
 
-const findListeningAgent = () => {
+const nextListeningAgent = () => {
     return new Promise((resolve, reject) => {
         const foundId = Object.keys(agents).find(agentId => agents[agentId].status === STATUS.listening);
         resolve(agents[foundId]);
+    });
+}
+
+const findListeningAgents = () => {
+    return new Promise((resolve, reject) => {
+        const foundIds = Object.keys(agents).filter(agentId => agents[agentId].status === STATUS.listening);
+        resolve(foundIds.map(agentId => agents[agentId]));
     });
 }
 
@@ -120,7 +121,8 @@ module.exports = {
     addAgent,
     delAgent,
     findAgent,
-    findListeningAgent,
+    nextListeningAgent,
+    findListeningAgents,
     setListening,
     setBusy,
     setOffline,
