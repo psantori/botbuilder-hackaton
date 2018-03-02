@@ -305,6 +305,7 @@ bot.use(new BotStateManager());
 bot.use(cmdManager);
 // Define the bots onReceive message handler
 bot.onReceive((context) => {
+	console.log('OnReceive activity: ' + context.request.type);
 	if (context.request.type === 'message' && 
 		(context.request.text === 'Talk to human assistant' || context.request.text === 'Handle your appointment')) {
 		context.state.conversation['action'] = undefined;
