@@ -204,7 +204,7 @@ const manageAgentMessage = (context) => {
 								promises.push(delHandOff(context.conversationReference, null));
 								promises.push(sendPAQueueMessageToAgent(result));
 							} else if (context.state.conversation.command.command.label === 'me') {
-								promises.push(context.reply(`Id: ${result.name}\n\rName: ${result.name}\n\rStatus: ${result.status}`));
+								promises.push(context.reply(`Name: ${result.name}\n\rStatus: ${result.status}`));
 							}
 							return promises;
 						}
@@ -298,6 +298,7 @@ bot.onReceive((context) => {
 					.then(result => resolve())
 					.catch(err => reject(err));
 				} else {
+
 					const msg = generateMenuBtns();
 					msg.text = `Please, select one of the suggested actions.`;
 					context.reply(msg);
