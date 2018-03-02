@@ -286,12 +286,17 @@ const adapter = new BotFrameworkAdapter({
     appPassword: process.env.MICROSOFT_APP_PASSWORD 
 });
 router.post('/api/messages', adapter.listen());
+router.get('/health', function(req, res) {
+	res.send('UP');
+});
 server.use(bodyParser.urlencoded({ extended: true }));
 server.use(bodyParser.json());
 server.use('/', router);
 server.listen(process.env.port || process.env.PORT || 3978, function () {
     console.log(`${server.name} listening to ${this.address().address}:${this.address().port}`);
 });
+
+
 
 // Initialize bot by passing it adapter
 const bot = new Bot(adapter);	
